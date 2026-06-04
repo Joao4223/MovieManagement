@@ -1,4 +1,5 @@
-﻿using MovieManagement.Business;
+﻿using System;
+using MovieManagement.Business;
 using MovieManagement.Data;
 using MovieManagement.Domain;
 
@@ -6,22 +7,28 @@ namespace MovieManagement.UI
 {
     internal class Program
     {
-        private static FilmeService? _filmeService;
+        private static FilmeService _filmeService = null!;
+        private static CategoriaService _categoriaService = null!;
+        private static RealizadorService _realizadorService =null!;
         static void Main(string[] args)
         {
-            // Instanciar o repositório em memória e passar para o serviço
-            IFilmeRepository repository = new FilmeRepository();
-            _filmeService = new FilmeService(repository);
+            // Instanciar Repositórios e Serviços (Injeção manual)
+            IFilmeRepository filmeRepo = new FilmeRepository();
+            ICategoriaRepository catRepo = new CategoriaRepository();
+            IRealizadorRepository realRepo = new RealizadorRepository();
+
+            _filmeService = new FilmeService(filmeRepo);
+            _categoriaService = new CategoriaService(catRepo);
+            _realizadorService = new RealizadorService(realRepo);
 
             int opcao;
             do
             {
                 Console.Clear();
-                Console.WriteLine("=== MovieManagement - Menu ===");
-                Console.WriteLine("1. Adicionar Filme");
-                Console.WriteLine("2. Listar Filmes");
-                Console.WriteLine("3. Procurar Filme por Título");
-                Console.WriteLine("4. Remover Filme");
+                Console.WriteLine("=== MovieManagement - Menu Principal ===");
+                Console.WriteLine("1. Gestão de Filmes");
+                Console.WriteLine("2. Gestão de Categorias");
+                Console.WriteLine("3. Gestão de Realizadores");
                 Console.WriteLine("0. Sair");
                 Console.Write("Escolha uma opção: ");
 
@@ -29,64 +36,162 @@ namespace MovieManagement.UI
 
                 switch (opcao)
                 {
-                    case 1: MenuAdicionar(); break;
-                    case 2: MenuListar(); break;
-                    case 3: MenuProcurar(); break;
-                    case 4: MenuRemover(); break;
+                    case 1: MenuFilmes(); break;
+                    case 2: MenuCategorias(); break;
+                    case 3: MenuRealizadores(); break;
                 }
-                if (opcao != 0) { Console.WriteLine("\nPressione qualquer tecla para continuar..."); Console.ReadKey(); }
-
             } while (opcao != 0);
         }
 
-        static void MenuAdicionar()
+       
+        static void MenuFilmes()
         {
-            Console.Clear();
-            Console.WriteLine("--- Adicionar Novo Filme ---");
-            Filme novo = new Filme();
+            int opcao;
+            do
+            {
+                Console.Clear();
+                Console.WriteLine("--- Gestão de Filmes ---");
+                Console.WriteLine("1. Adicionar Filme");
+                Console.WriteLine("2. Listar Filmes");
+                Console.WriteLine("3. Procurar Filme por Título");
+                Console.WriteLine("4. Remover Filme");
+                Console.WriteLine("0. Voltar");
+                Console.Write("Opção: ");
 
-            Console.Write("Título: "); novo.Titulo = Console.ReadLine();
-            Console.Write("Ano: "); int.TryParse(Console.ReadLine(), out int ano); novo.Ano = ano;
-            Console.Write("Língua: "); novo.Lingua = Console.ReadLine();
-            Console.Write("Classificação (0-5): "); double.TryParse(Console.ReadLine(), out double classif); novo.Classificacao = classif;
+                if (!int.TryParse(Console.ReadLine(), out opcao)) opcao = -1;
 
-            string resultado = _filmeService.AdicionarFilme(novo);
-            Console.WriteLine(resultado);
+                switch (opcao)
+                {
+                    case 1:
+                        Console.Clear();
+                        Filme novo = new Filme();
+                        Console.Write("Título: "); novo.Titulo = Console.ReadLine() ?? "";
+                        Console.Write("Ano: "); int.TryParse(Console.ReadLine(), out int ano); novo.Ano = ano;
+                        Console.Write("Língua: "); novo.Lingua = Console.ReadLine() ?? "";
+                        Console.Write("Classificação (0-5): "); double.TryParse(Console.ReadLine(), out double classif); novo.Classificacao = classif;
+                        Console.WriteLine(_filmeService.AdicionarFilme(novo));
+                        break;
+
+                    case 2:
+                        Console.Clear();
+                        var lista = _filmeService.ObterTodosFilmes();
+                        if (lista.Count == 0) Console.WriteLine("Nenhum filme registado.");
+                        foreach (var f in lista) Console.WriteLine($"[{f.Id}] {f.Titulo} ({f.Ano}) - Nota: {f.Classificacao}/5");
+                        break;
+
+                    case 3:
+                        Console.Clear();
+                        Console.Write("Digite o título: ");
+                        // Mudamos o nome de 'f' para 'filmeEncontrado' para eliminar o erro
+                        var filmeEncontrado = _filmeService.PesquisarFilme(Console.ReadLine() ?? "");
+                        if (filmeEncontrado != null)
+                            Console.WriteLine($"Encontrado: [{filmeEncontrado.Id}] {filmeEncontrado.Titulo} ({filmeEncontrado.Ano})");
+                        else
+                            Console.WriteLine("Filme não encontrado.");
+                        break;
+
+                    case 4:
+                        Console.Clear();
+                        Console.Write("ID a eliminar: ");
+                        int.TryParse(Console.ReadLine(), out int id);
+                        Console.WriteLine(_filmeService.EliminarFilme(id) ? "Removido!" : "Não encontrado.");
+                        break;
+                }
+                if (opcao != 0) { Console.WriteLine("\nPressione qualquer tecla..."); Console.ReadKey(); }
+            } while (opcao != 0);
         }
-
-        static void MenuListar()
+       
+        static void MenuCategorias()
         {
-            Console.Clear();
-            Console.WriteLine("--- Lista de Filmes ---");
-            var lista = _filmeService.ObterTodosFilmes();
-            if (lista.Count == 0) Console.WriteLine("Nenhum filme registado.");
-            foreach (var f in lista)
-                Console.WriteLine($"[{f.Id}] {f.Titulo} ({f.Ano}) - {f.Lingua} | Nota: {f.Classificacao}/5");
-        }
+            int opcao;
+            do
+            {
+                Console.Clear();
+                Console.WriteLine("--- Gestão de Categorias ---");
+                Console.WriteLine("1. Adicionar Categoria");
+                Console.WriteLine("2. Listar Categorias");
+                Console.WriteLine("3. Remover Categoria");
+                Console.WriteLine("0. Voltar");
+                Console.Write("Opção: ");
 
-        static void MenuProcurar()
-        {
-            Console.Clear();
-            Console.WriteLine("--- Procurar Filme ---");
-            Console.Write("Digite o título: ");
-            string termo = Console.ReadLine();
-            var f = _filmeService.PesquisarFilme(termo);
-            if (f != null)
-                Console.WriteLine($"Encontrado: [{f.Id}] {f.Titulo} ({f.Ano}) - Nota: {f.Classificacao}");
-            else
-                Console.WriteLine("Filme não encontrado.");
-        }
+                if (!int.TryParse(Console.ReadLine(), out opcao)) opcao = -1;
 
-        static void MenuRemover()
-        {
-            Console.Clear();
-            Console.WriteLine("--- Remover Filme ---");
-            Console.Write("Digite o ID do filme a eliminar: ");
-            int.TryParse(Console.ReadLine(), out int id);
-            if (_filmeService.EliminarFilme(id))
-                Console.WriteLine("Filme removido com sucesso!");
-            else
-                Console.WriteLine("Filme não encontrado.");
+                switch (opcao)
+                {
+                    case 1:
+                        Console.Clear();
+                        Categoria nova = new Categoria();
+                        Console.Write("Nome da Categoria: "); nova.Nome = Console.ReadLine() ?? "";
+                        Console.WriteLine(_categoriaService.AdicionarCategoria(nova));
+                        break;
+                    case 2:
+                        Console.Clear();
+                        var lista = _categoriaService.ObterTodasCategorias();
+                        if (lista.Count == 0) Console.WriteLine("Nenhuma categoria registada.");
+                        foreach (var c in lista) Console.WriteLine($"[{c.Id}] {c.Nome}");
+                        break;
+                    case 3:
+                        Console.Clear();
+                        Console.Write("ID a eliminar: ");
+                        int.TryParse(Console.ReadLine(), out int id);
+                        Console.WriteLine(_categoriaService.EliminarCategoria(id) ? "Removida!" : "Não encontrada.");
+                        break;
+                }
+                if (opcao != 0) { Console.WriteLine("\nPressione qualquer tecla..."); Console.ReadKey(); }
+            } while (opcao != 0);
         }
+        
+
+        
+        static void MenuRealizadores()
+        {
+            int opcao;
+            do
+            {
+                Console.Clear();
+                Console.WriteLine("--- Gestão de Realizadores ---");
+                Console.WriteLine("1. Adicionar Realizador");
+                Console.WriteLine("2. Listar Realizadores");
+                Console.WriteLine("3. Remover Realizador");
+                Console.WriteLine("0. Voltar");
+                Console.Write("Opção: ");
+
+                if (!int.TryParse(Console.ReadLine(), out opcao)) opcao = -1;
+
+                switch (opcao)
+                {
+                    case 1:
+                        Console.Clear();
+                        Realizador novo = new Realizador();
+                        Console.Write("Nome do Realizador: "); novo.Nome = Console.ReadLine() ?? "";
+                        Console.Write("País de Origem: "); novo.Pais = Console.ReadLine() ?? "";
+                        Console.WriteLine(_realizadorService.AdicionarRealizador(novo));
+                        break;
+                    case 2:
+                        Console.Clear();
+                        var lista = _realizadorService.ObterTodosRealizadores();
+                        if (lista.Count == 0) Console.WriteLine("Nenhum realizador registado.");
+                        foreach (var r in lista) Console.WriteLine($"[{r.Id}] {r.Nome} ({r.Pais})");
+                        break;
+                    case 3:
+                        Console.Clear();
+                        Console.Write("ID a eliminar: ");
+                        int.TryParse(Console.ReadLine(), out int id);
+                        Console.WriteLine(_realizadorService.EliminarRealizador(id) ? "Removido!" : "Não encontrado.");
+                        break;
+                }
+                if (opcao != 0) { Console.WriteLine("\nPressione qualquer tecla..."); Console.ReadKey(); }
+            } while (opcao != 0);
+        }
+        
+
     }
+
+
+
+
+
+
+
 }
+

@@ -5,45 +5,55 @@ namespace MovieManagement.Business
     public class FilmeService
     {
         private readonly IFilmeRepository _filmeRepository;
+        private readonly ICategoriaRepository _categoriaRepository;
+        private readonly IRealizadorRepository _realizadorRepository;
 
-        // O serviço de filmes recebe a interface (Inversão de Dependência)
-        public FilmeService(IFilmeRepository filmeRepository)
+
+        
+        public FilmeService(
+            IFilmeRepository filmeRepository,
+            ICategoriaRepository categoriaRepository,
+            IRealizadorRepository realizadorRepository)
         {
             _filmeRepository = filmeRepository;
+            _categoriaRepository = categoriaRepository;
+            _realizadorRepository = realizadorRepository;
         }
 
-        public string AdicionarFilme(Filme filme)
+        public string AdicionarFilme(Filme filme, string nomeCategoria, string nomeRealizador)
         {
-            // Regra de Negócio: Título obrigatório
+            // Validações básicas da Parte 1
             if (string.IsNullOrWhiteSpace(filme.Titulo))
                 return "Erro: O título do filme é obrigatório.";
 
-            // Regra de Negócio: Não pode existir duplicado
             if (_filmeRepository.ProcurarPorTitulo(filme.Titulo) != null)
                 return "Erro: Já existe um filme registado com este título.";
 
-            // Regra de Negócio: Classificação entre 0 e 5
             if (filme.Classificacao < 0 || filme.Classificacao > 5)
                 return "Erro: A classificação deve situar-se entre 0 e 5.";
 
+            // Validações de Associação (Parte 3)
+            var categoriaExistente = _categoriaRepository.ProcurarPorNome(nomeCategoria);
+            if (categoriaExistente == null)
+                return $"Erro: A categoria '{nomeCategoria}' não existe. Crie-a primeiro.";
+
+            var realizadorExistente = _realizadorRepository.ProcurarPorNome(nomeRealizador);
+            if (realizadorExistente == null)
+                return $"Erro: O realizador '{nomeRealizador}' não existe. Crie-o primeiro.";
+
+            // Fazer a associação
+            filme.Categoria = categoriaExistente;
+            filme.Realizador = realizadorExistente;
+
             _filmeRepository.Adicionar(filme);
-            return "Filme adicionado com sucesso!";
+            return "Filme adicionado e associado com sucesso!";
         }
 
-        public List<Filme> ObterTodosFilmes()
-        {
-            return _filmeRepository.ListarTodos();
-        }
+        public List<Filme> ObterTodosFilmes() => _filmeRepository.ListarTodos();
 
-        public Filme? PesquisarFilme(string titulo)
-        {
-            return _filmeRepository.ProcurarPorTitulo(titulo);
-        }
+        public Filme? PesquisarFilme(string titulo) => _filmeRepository.ProcurarPorTitulo(titulo);
 
-        public bool EliminarFilme(int id)
-        {
-            return _filmeRepository.Remover(id);
-        }
+        public bool EliminarFilme(int id) => _filmeRepository.Remover(id);
 
     }
 }

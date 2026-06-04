@@ -12,15 +12,22 @@ namespace MovieManagement.UI
         private static RealizadorService _realizadorService =null!;
         static void Main(string[] args)
         {
+            //Cria o ficheiro SQLite e as tabelas (Filmes, Categorias e Realizadores) caso não existam no arranque da aplicação.
+            
+            DatabaseConnection.InicializarBaseDeDados();
+
             // Instanciar Repositórios e Serviços (Injeção manual)
             IFilmeRepository filmeRepo = new FilmeRepository();
             ICategoriaRepository catRepo = new CategoriaRepository();
             IRealizadorRepository realRepo = new RealizadorRepository();
 
-            _filmeService = new FilmeService(filmeRepo);
+            // Atualização Parte 3: O FilmeService agora recebe os 3 repositórios
+            _filmeService = new FilmeService(filmeRepo, catRepo, realRepo);
             _categoriaService = new CategoriaService(catRepo);
             _realizadorService = new RealizadorService(realRepo);
 
+
+            //Menu principal
             int opcao;
             do
             {
@@ -43,7 +50,7 @@ namespace MovieManagement.UI
             } while (opcao != 0);
         }
 
-       
+        //Submenu Filmes
         static void MenuFilmes()
         {
             int opcao;
@@ -69,25 +76,39 @@ namespace MovieManagement.UI
                         Console.Write("Ano: "); int.TryParse(Console.ReadLine(), out int ano); novo.Ano = ano;
                         Console.Write("Língua: "); novo.Lingua = Console.ReadLine() ?? "";
                         Console.Write("Classificação (0-5): "); double.TryParse(Console.ReadLine(), out double classif); novo.Classificacao = classif;
-                        Console.WriteLine(_filmeService.AdicionarFilme(novo));
+
+                        // Atualização Parte 3: Pedir os dados associados
+                        Console.Write("Nome da Categoria Existente: "); string catNome = Console.ReadLine() ?? "";
+                        Console.Write("Nome do Realizador Existente: "); string realNome = Console.ReadLine() ?? "";
+
+                        Console.WriteLine(_filmeService.AdicionarFilme(novo, catNome, realNome));
                         break;
 
                     case 2:
                         Console.Clear();
                         var lista = _filmeService.ObterTodosFilmes();
                         if (lista.Count == 0) Console.WriteLine("Nenhum filme registado.");
-                        foreach (var f in lista) Console.WriteLine($"[{f.Id}] {f.Titulo} ({f.Ano}) - Nota: {f.Classificacao}/5");
+
+                        // Atualização Parte 3: Mostrar a Categoria e o Realizador na listagem
+                        foreach (var f in lista)
+                        {
+                            string catTxt = f.Categoria != null ? f.Categoria.Nome : "Sem Categoria";
+                            string realTxt = f.Realizador != null ? f.Realizador.Nome : "Sem Realizador";
+                            Console.WriteLine($"[{f.Id}] {f.Titulo} ({f.Ano}) | Cat: {catTxt} | Realizador: {realTxt} | Nota: {f.Classificacao}/5");
+                        }
                         break;
 
                     case 3:
                         Console.Clear();
                         Console.Write("Digite o título: ");
-                        // Mudamos o nome de 'f' para 'filmeEncontrado' para eliminar o erro
                         var filmeEncontrado = _filmeService.PesquisarFilme(Console.ReadLine() ?? "");
                         if (filmeEncontrado != null)
-                            Console.WriteLine($"Encontrado: [{filmeEncontrado.Id}] {filmeEncontrado.Titulo} ({filmeEncontrado.Ano})");
-                        else
-                            Console.WriteLine("Filme não encontrado.");
+                        {
+                            string catTxt = filmeEncontrado.Categoria != null ? filmeEncontrado.Categoria.Nome : "Sem Categoria";
+                            string realTxt = filmeEncontrado.Realizador != null ? filmeEncontrado.Realizador.Nome : "Sem Realizador";
+                            Console.WriteLine($"Encontrado: {filmeEncontrado.Titulo} ({filmeEncontrado.Ano}) | Cat: {catTxt} | Realizador: {realTxt}");
+                        }
+                        else Console.WriteLine("Filme não encontrado.");
                         break;
 
                     case 4:
@@ -101,6 +122,8 @@ namespace MovieManagement.UI
             } while (opcao != 0);
         }
        
+
+        //Submenu Categorias
         static void MenuCategorias()
         {
             int opcao;
@@ -142,7 +165,7 @@ namespace MovieManagement.UI
         }
         
 
-        
+        //Submenu Realizadores
         static void MenuRealizadores()
         {
             int opcao;
@@ -184,14 +207,16 @@ namespace MovieManagement.UI
             } while (opcao != 0);
         }
         
-
     }
 
 
-
-
-
-
-
 }
+
+
+
+
+
+
+
+
 

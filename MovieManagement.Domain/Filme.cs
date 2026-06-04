@@ -7,5 +7,8 @@
         public int Ano { get; set; }
         public string Lingua { get; set; } = string.Empty;
         public double Classificacao { get; set; }
+
+        public Categoria? Categoria { get; set; }
+        public Realizador? Realizador { get; set; }
     }
 }

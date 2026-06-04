@@ -1,37 +1,86 @@
-﻿using System;
+﻿using Microsoft.Data.Sqlite;
+using MovieManagement.Domain;
+using System;
 using System.Collections.Generic;
 using System.Text;
-using MovieManagement.Domain;
 
 namespace MovieManagement.Data
 {
     public class CategoriaRepository : ICategoriaRepository
     {
-        private static readonly List<Categoria> _categorias = new List<Categoria>();
-        private static int _proximoId = 1;
-
         public void Adicionar(Categoria categoria)
         {
-            categoria.Id = _proximoId++;
-            _categorias.Add(categoria);
+            using (var conexao = DatabaseConnection.GetConnection())
+            {
+                // Grava a nova categoria e descobre o ID automático criado pelo SQLite
+                string query = "INSERT INTO Categorias (Nome) VALUES (@Nome); SELECT last_insert_rowid();";
+                using (var comando = new SqliteCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@Nome", categoria.Nome);
+                    categoria.Id = Convert.ToInt32(comando.ExecuteScalar());
+                }
+            }
         }
 
-        public List<Categoria> ListarTodas() => _categorias;
+        public List<Categoria> ListarTodas()
+        {
+            var lista = new List<Categoria>();
+            using (var conexao = DatabaseConnection.GetConnection())
+            {
+                string query = "SELECT Id, Nome FROM Categorias";
+                using (var comando = new SqliteCommand(query, conexao))
+                using (var leitor = comando.ExecuteReader())
+                {
+                    while (leitor.Read())
+                    {
+                        lista.Add(new Categoria
+                        {
+                            Id = leitor.GetInt32(0),
+                            Nome = leitor.GetString(1)
+                        });
+                    }
+                }
+            }
+            return lista;
+        }
 
         public Categoria? ProcurarPorNome(string nome)
         {
-            return _categorias.FirstOrDefault(c => c.Nome.Equals(nome, StringComparison.OrdinalIgnoreCase));
+            using (var conexao = DatabaseConnection.GetConnection())
+            {
+                // O "COLLATE NOCASE" serve para ignorar maiúsculas/minúsculas na pesquisa
+                string query = "SELECT Id, Nome FROM Categorias WHERE Nome = @Nome COLLATE NOCASE";
+                using (var comando = new SqliteCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@Nome", nome);
+                    using (var leitor = comando.ExecuteReader())
+                    {
+                        if (leitor.Read())
+                        {
+                            return new Categoria
+                            {
+                                Id = leitor.GetInt32(0),
+                                Nome = leitor.GetString(1)
+                            };
+                        }
+                    }
+                }
+            }
+            return null;
         }
 
         public bool Remover(int id)
         {
-            var cat = _categorias.FirstOrDefault(c => c.Id == id);
-            if (cat != null)
+            using (var conexao = DatabaseConnection.GetConnection())
             {
-                _categorias.Remove(cat);
-                return true;
+                string query = "DELETE FROM Categorias WHERE Id = @Id";
+                using (var comando = new SqliteCommand(query, conexao))
+                {
+                    comando.Parameters.AddWithValue("@Id", id);
+                    int linhasAfetadas = comando.ExecuteNonQuery();
+                    return linhasAfetadas > 0;
+                }
             }
-            return false;
         }
     }
 }
